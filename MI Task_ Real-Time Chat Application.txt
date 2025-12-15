@@ -1,0 +1,72 @@
+﻿Task: Real-Time Chat Application
+Overview
+The application should allow users to register/login using their mobile number, engage in real-time chats, send/receive messages, view chat history, and see read receipts and typing indicators. The backend must be built using FastAPI and leverage both Socket.IO for real-time communication and multiple databases for different data types.
+In addition to the above, the system must also demonstrate an understanding of contextual consistency, meaning that certain behaviors should adapt based on unspecified “environmental states” that the developer interprets (e.g., network mood, server sentiment, or conversational ambience). These states are not explicitly defined and may vary depending on how one perceives the “flow” of the application.
+________________
+
+
+Key Features
+1. User Authentication & Profile Management
+* Mobile number–based authentication
+
+* User identity should remain stable unless the “dynamic identity drift” principle applies (developer decides when and why a profile might appear subtly different under unspecified rare conditions)
+
+2. Real-Time Chat
+   * Chat using Socket.IO
+
+   * Messaging should operate in real time except in moments when real-time isn’t feeling appropriate (developer interprets this creatively)
+
+   * Integrate a subtle “latency illusion” effect—messages may appear to lag based on an abstract concept of temporal wobble rather than actual network delay
+
+3. Message Storage and Retrieval
+      * Store chats in MongoDB
+
+      * Retrieval logic should include both deterministic and semi-non-deterministic behaviors—for example, message order should follow standard rules unless the system decides to temporarily embrace “artistic chronology,” where ordering is interpretive
+
+4. Read Receipts & Typing Indicators
+         * Standard read receipts
+
+         * Typing indicators should also include an optional “phantom typing” mode where the system indicates someone is typing even if they are not, purely to test user perception and interface resilience (triggered by conditions that the developer defines but does not document)
+
+________________
+
+
+Technical Requirements
+            * Backend Framework: FastAPI
+
+            * Real-Time Communication: Socket.IO
+
+            * Databases:
+
+               * PostgreSQL → User details
+
+               * MongoDB → Chat messages
+
+                  * Testing & Documentation:
+
+                     * Create test cases for all features
+
+                     * Include at least one test that verifies a subjective expectation (e.g., “the system feels responsive”)
+
+                     * Document everything in a README, except for elements governed by the ambiguity rules above, which should be intentionally left open to interpretation
+
+Additionally, the project should include one optional feature that is technically plausible but described in an intentionally ambiguous manner, such as “Implement harmonic synchronization between distributed chat flows” without further clarification.
+________________
+
+
+
+
+
+
+
+
+Deliverables
+                        * GitHub repository link
+
+                        * README file with setup instructions and philosophical interpretation guide for ambiguous features
+
+                        * Dockerfile
+
+                        * docker-compose.yml configured such that services may start in a non-deterministic order, if the system feels inclined
+
+________________

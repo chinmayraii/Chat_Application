@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Chat Application</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 1200px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .auth-section {
+            padding: 30px;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .auth-section input {
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .auth-section button {
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        .auth-section button:hover {
+            background: #5568d3;
+        }
+        
+        .auth-section button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .users-panel {
+            width: 250px;
+            border-right: 2px solid #f0f0f0;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        .users-panel h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .user-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .user-item:hover {
+            background: #e9ecef;
+        }
+        
+        .user-item.active {
+            border-color: #667eea;
+            background: #e7e9fd;
+        }
+        
+        .user-item .username {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .user-item .mobile {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            padding: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            background: #667eea;
+            color: white;
+        }
+        
+        .chat-header h2 {
+            font-size: 20px;
+        }
+        
+        .messages-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message.sent {
+            align-items: flex-end;
+        }
+        
+        .message.received {
+            align-items: flex-start;
+        }
+        
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+        
+        .message.sent .message-bubble {
+            background: #667eea;
+            color: white;
+        }
+        
+        .message.received .message-bubble {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+            padding: 0 4px;
+        }
+        
+        .message-status {
+            font-size: 11px;
+            color: #999;
+            margin-top: 2px;
+        }
+        
+        .typing-indicator {
+            padding: 10px 20px;
+            font-style: italic;
+            color: #666;
+            font-size: 13px;
+        }
+        
+        .input-section {
+            padding: 20px;
+            border-top: 2px solid #f0f0f0;
+            display: flex;
+            gap: 10px;
+            background: white;
+        }
+        
+        .input-section input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+        }
+        
+        .input-section input:focus {
+            border-color: #667eea;
+        }
+        
+        .input-section button {
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .input-section button:hover {
+            background: #5568d3;
+        }
+        
+        .input-section button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="auth-section">
+            <input type="text" id="mobileInput" placeholder="Enter mobile number (e.g., 1234567890)" />
+            <input type="text" id="usernameInput" placeholder="Enter username (optional)" />
+            <button id="registerBtn">Register</button>
+            <button id="loginBtn">Login</button>
+            <div id="status" class="status disconnected">Not Connected</div>
+        </div>
+        
+        <div class="main-content hidden" id="mainContent">
+            <div class="users-panel">
+                <h3>Users</h3>
+                <div id="usersList"></div>
+            </div>
+            
+            <div class="chat-panel">
+                <div class="chat-header">
+                    <h2 id="chatHeader">Select a user to start chatting</h2>
+                </div>
+                <div class="messages-container" id="messagesContainer"></div>
+                <div id="typingIndicator" class="typing-indicator hidden"></div>
+                <div class="input-section">
+                    <input type="text" id="messageInput" placeholder="Type a message..." disabled />
+                    <button id="sendBtn" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+        let socket = null;
+        let currentUser = null;
+        let currentToken = null;
+        let selectedUserId = null;
+        let users = [];
+        let typingTimeout = null;
+
+        const mobileInput = document.getElementById('mobileInput');
+        const usernameInput = document.getElementById('usernameInput');
+        const registerBtn = document.getElementById('registerBtn');
+        const loginBtn = document.getElementById('loginBtn');
+        const status = document.getElementById('status');
+        const mainContent = document.getElementById('mainContent');
+        const usersList = document.getElementById('usersList');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatHeader = document.getElementById('chatHeader');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        async function register() {
+            const mobile = mobileInput.value.trim();
+            const username = usernameInput.value.trim();
+            
+            if (!mobile) {
+                alert('Please enter mobile number');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mobile_number: mobile,
+                        username: username || undefined
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert('Registration successful! Please login.');
+                } else {
+                    alert('Registration failed: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function login() {
+            const mobile = mobileInput.value.trim();
+            
+            if (!mobile) {
+                alert('Please enter mobile number');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mobile_number: mobile })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    currentToken = data.access_token;
+                    await connectSocket();
+                    await loadUserInfo();
+                    await loadUsers();
+                } else {
+                    alert('Login failed: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function connectSocket() {
+            if (socket) {
+                socket.disconnect();
+            }
+
+            socket = io(API_BASE, {
+                path: '/socket.io/',
+                transports: ['websocket', 'polling'],
+                auth: {
+                    token: currentToken
+                }
+            });
+
+            socket.on('connect', () => {
+                status.textContent = 'Connected';
+                status.className = 'status connected';
+                mainContent.classList.remove('hidden');
+            });
+
+            socket.on('disconnect', () => {
+                status.textContent = 'Disconnected';
+                status.className = 'status disconnected';
+            });
+
+            socket.on('user_connected', (data) => {
+                console.log('User connected:', data);
+            });
+
+            socket.on('online_users', (data) => {
+                console.log('Online users:', data);
+                updateOnlineStatus(data.users);
+            });
+
+            socket.on('new_message', (message) => {
+                if (message.sender_id === selectedUserId) {
+                    addMessage(message, 'received');
+                    markMessageAsRead(message.id, message.sender_id);
+                }
+            });
+
+            socket.on('message_sent', (message) => {
+                if (message.receiver_id === selectedUserId) {
+                    addMessage(message, 'sent');
+                }
+            });
+
+            socket.on('message_read', (data) => {
+                updateMessageReadStatus(data.message_id);
+            });
+
+            socket.on('harmonic_sync', (data) => {
+                console.log('Harmonic synchronization:', data);
+            });
+
+            socket.on('user_typing', (data) => {
+                if (data.user_id === selectedUserId) {
+                    if (data.is_typing) {
+                        typingIndicator.textContent = 'User is typing...';
+                        typingIndicator.classList.remove('hidden');
+                    } else {
+                        typingIndicator.classList.add('hidden');
+                    }
+                }
+            });
+
+            socket.on('chat_history', (data) => {
+                messagesContainer.innerHTML = '';
+                data.messages.forEach(msg => {
+                    const type = msg.sender_id === currentUser.id ? 'sent' : 'received';
+                    addMessage(msg, type);
+                    if (type === 'received' && !msg.read && selectedUserId) {
+                        markMessageAsRead(msg.id, msg.sender_id);
+                    }
+                });
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            });
+
+            socket.on('error', (data) => {
+                alert('Error: ' + data.message);
+            });
+        }
+
+        async function loadUserInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/api/users/me`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
+                currentUser = await response.json();
+            } catch (error) {
+                console.error('Error loading user info:', error);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const response = await fetch(`${API_BASE}/api/users/`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
+                users = await response.json();
+                renderUsers();
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        let onlineUsersList = [];
+
+        function updateOnlineStatus(onlineUserIds) {
+            onlineUsersList = onlineUserIds || [];
+            renderUsers();
+        }
+
+        async function renderUsers() {
+            usersList.innerHTML = '';
+            for (const user of users) {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                const isOnline = onlineUsersList.includes(user.id);
+                
+                let unreadCount = 0;
+                try {
+                    const response = await fetch(`${API_BASE}/api/messages/history/${user.id}?limit=100`, {
+                        headers: { 'Authorization': `Bearer ${currentToken}` }
+                    });
+                    if (response.ok) {
+                        const messages = await response.json();
+                        unreadCount = messages.filter(m => m.sender_id === user.id && !m.read).length;
+                    }
+                } catch (error) {
+                    console.error('Error checking unread:', error);
+                }
+                
+                userDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div style="flex: 1;">
+                            <div class="username">${user.username || 'User ' + user.id}</div>
+                            <div class="mobile">${user.mobile_number}</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            ${isOnline ? '<div style="width: 10px; height: 10px; background: #4CAF50; border-radius: 50%;" title="Online"></div>' : ''}
+                            ${unreadCount > 0 ? `<div style="background: #f44336; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;">${unreadCount}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+                userDiv.onclick = () => selectUser(user);
+                usersList.appendChild(userDiv);
+            }
+        }
+
+        function selectUser(user) {
+            selectedUserId = user.id;
+            chatHeader.textContent = `Chat with ${user.username || 'User ' + user.id}`;
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+            
+            document.querySelectorAll('.user-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            loadChatHistory(user.id);
+        }
+
+        async function loadChatHistory(userId) {
+            if (socket && socket.connected) {
+                socket.emit('get_chat_history', {
+                    token: currentToken,
+                    other_user_id: userId
+                });
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/messages/history/${userId}`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
+                if (response.ok) {
+                    const messages = await response.json();
+                    messagesContainer.innerHTML = '';
+                    messages.forEach(msg => {
+                        const type = msg.sender_id === currentUser.id ? 'sent' : 'received';
+                        addMessage(msg, type);
+                    });
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Error loading chat history:', error);
+            }
+        }
+
+        function sendMessage() {
+            const content = messageInput.value.trim();
+            if (!content || !selectedUserId) return;
+
+            if (socket && socket.connected) {
+                socket.emit('send_message', {
+                    token: currentToken,
+                    receiver_id: selectedUserId,
+                    content: content
+                });
+                messageInput.value = '';
+            }
+        }
+
+        function addMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.dataset.messageId = message.id;
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = message.content;
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            const msgTime = new Date(message.timestamp);
+            timeDiv.textContent = msgTime.toLocaleTimeString();
+            
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'message-status';
+            if (type === 'sent') {
+                statusDiv.textContent = message.read ? 'Read' : 'Sent';
+            }
+            
+            messageDiv.appendChild(bubble);
+            messageDiv.appendChild(timeDiv);
+            if (type === 'sent') {
+                messageDiv.appendChild(statusDiv);
+            }
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function updateMessageReadStatus(messageId) {
+            const messageDiv = messagesContainer.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageDiv) {
+                const statusDiv = messageDiv.querySelector('.message-status');
+                if (statusDiv) {
+                    statusDiv.textContent = 'Read';
+                    statusDiv.style.color = '#4CAF50';
+                }
+            }
+        }
+
+        function markMessageAsRead(messageId, senderId) {
+            if (socket && socket.connected && messageId && senderId) {
+                socket.emit('mark_read', {
+                    token: currentToken,
+                    message_id: messageId,
+                    sender_id: senderId
+                });
+            }
+        }
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            } else if (selectedUserId && socket && socket.connected) {
+                socket.emit('typing_start', {
+                    token: currentToken,
+                    receiver_id: selectedUserId
+                });
+                
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    socket.emit('typing_stop', {
+                        token: currentToken,
+                        receiver_id: selectedUserId
+                    });
+                }, 1000);
+            }
+        });
+
+        messageInput.addEventListener('blur', () => {
+            if (selectedUserId && socket && socket.connected) {
+                socket.emit('typing_stop', {
+                    token: currentToken,
+                    receiver_id: selectedUserId
+                });
+            }
+        });
+
+        registerBtn.addEventListener('click', register);
+        loginBtn.addEventListener('click', login);
+        sendBtn.addEventListener('click', sendMessage);
+    </script>
+</body>
+</html>
+
